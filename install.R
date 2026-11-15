@@ -4,7 +4,8 @@
 #   Rscript install.R
 #
 # Idempotent : on peut le relancer sans risque. Il
-#   1. vérifie les prérequis système (R >= 4.0, compilateurs C/C++/Fortran) ;
+#   1. vérifie les prérequis système (R >= 4.0, compilateurs C/C++/Fortran, et
+#      sur une machine vierge pkg-config, cmake et openssl) ;
 #   2. initialise renv (bibliothèque de paquets propre au projet, comme node_modules)
 #      avec le support Bioconductor, ou restaure renv.lock s'il existe ;
 #   3. installe uniquement les paquets manquants (CRAN, Bioconductor, GitHub) ;
@@ -66,6 +67,24 @@ local({
   renv::settings$snapshot.type("all")
 
   installed <- function() rownames(utils::installed.packages(lib.loc = renv::paths$library()))
+
+  # Outils système nécessaires à la compilation (machine vierge). Vérifiés avant
+  # de compiler quoi que ce soit, et seulement s'il reste des paquets à installer.
+  # Le script n'installe rien au niveau système : il affiche la commande à lancer.
+  if (!"MetaboAnalystR" %in% installed()) {
+    missing <- character(0)
+    has_pc  <- nzchar(Sys.which("pkg-config"))
+    if (!has_pc) missing <- c(missing, "pkgconf")       # trouve les bibliothèques système
+    if (!nzchar(Sys.which("cmake"))) missing <- c(missing, "cmake")   # RcppParallel
+    ssl_ok <- (has_pc && system2("pkg-config", c("--exists", "openssl")) == 0L) ||
+      dir.exists("/opt/homebrew/opt/openssl@3") || dir.exists("/usr/local/opt/openssl@3")
+    if (!ssl_ok) missing <- c(missing, "openssl@3")     # paquet R openssl (httr)
+    if (length(missing))
+      fail("Outils système manquants : ", paste(missing, collapse = ", "), ".\n",
+           "Installez-les puis relancez Rscript install.R :\n",
+           "  brew install ", paste(missing, collapse = " "))
+    msg("Outils système : pkg-config, cmake et openssl présents")
+  }
 
   # Clone neuf : on restaure d'abord les versions exactes du lockfile.
   if (file.exists("renv.lock") && !"MetaboAnalystR" %in% installed()) {

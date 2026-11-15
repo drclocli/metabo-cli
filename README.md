@@ -28,7 +28,13 @@ s'utilisent aussi directement depuis R ou RStudio, sans le CLI.
 | Xcode Command Line Tools | clang 21 | `xcode-select --install` |
 | gfortran | GCC 16.2 (Homebrew) | compilation de paquets Bioconductor |
 | cmake | 4.5 (Homebrew) | requis par RcppParallel (dépendance de qs2) |
+| pkgconf, openssl@3 | Homebrew | pkg-config trouve les bibliothèques système ; openssl pour le paquet R `openssl` (utilisé par `httr`) |
 | Accès Internet | | installation, et module `pathway` à chaque exécution |
+
+Les autres bibliothèques système utilisées par les paquets compilés (cairo, openblas,
+libomp, libpng, freetype, X11…) sont installées automatiquement avec la formule `r`.
+Sur une machine vierge, `install.R` vérifie pkg-config, cmake et openssl avant de
+compiler quoi que ce soit, et affiche la commande `brew install` à lancer s'il en manque.
 
 **R de Homebrew ou R officiel du CRAN.** Avec le R de Homebrew, CRAN et Bioconductor
 ne fournissent pas de paquets précompilés : les quelque 260 dépendances sont compilées
@@ -38,22 +44,55 @@ avec le [gfortran de mac.r-project.org](https://mac.r-project.org/tools/) permet
 d'installer des binaires, beaucoup plus vite. Ce projet a été mis au point avec le R de
 Homebrew.
 
-```bash
-brew install r gcc cmake
-```
+## Installation sur une machine vierge
+
+Toutes les étapes, dans l'ordre. Sautez celles qui sont déjà faites.
+
+1. Outils de développement d'Apple (clang, git) :
+   ```bash
+   xcode-select --install
+   ```
+2. [Homebrew](https://brew.sh), puis ajout de `brew` au `PATH` (la commande exacte est
+   affichée à la fin de l'installation de Homebrew) :
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+   ```bash
+   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile && eval "$(/opt/homebrew/bin/brew shellenv)"
+   ```
+3. R, le compilateur Fortran et les outils de compilation :
+   ```bash
+   brew install r gcc cmake pkgconf openssl@3
+   ```
+4. `~/.local/bin` dans le `PATH`, pour la commande `metabo` (macOS ne l'y met pas par
+   défaut) :
+   ```bash
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zprofile && export PATH="$HOME/.local/bin:$PATH"
+   ```
+5. Le projet et ses dépendances R (30 à 60 min la première fois, voir plus haut) :
+   ```bash
+   git clone https://github.com/drclocli/metabo-cli.git && cd metabo-cli
+   ```
+   ```bash
+   Rscript install.R
+   ```
+6. Vérification :
+   ```bash
+   metabo stats --input examples/human_cachexia.csv --out /tmp/metabo-test
+   ```
 
 ## Installation
 
-```bash
-git clone <url-du-repo> metabo-cli && cd metabo-cli
-```
+Sur une machine qui a déjà les prérequis :
+
 ```bash
 Rscript install.R
 ```
 
 `install.R` est idempotent (environ 10 s quand tout est déjà installé). Il :
 
-1. vérifie R et les compilateurs C, C++ et Fortran ;
+1. vérifie R et les compilateurs C, C++ et Fortran, et s'il reste des paquets à
+   compiler, la présence de pkg-config, cmake et openssl ;
 2. initialise [renv](https://rstudio.github.io/renv/) (une bibliothèque de paquets
    propre au projet, l'équivalent de `node_modules`) avec le support Bioconductor, ou
    restaure les versions exactes de `renv.lock` (l'équivalent d'un `package-lock.json`) ;
