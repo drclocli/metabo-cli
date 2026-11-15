@@ -48,3 +48,19 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# renv : la bibliothèque est reconstruite depuis renv.lock
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+
+# metabo-cli : résultats d'analyse et fichiers temporaires
+out/
+resultats/
+results/
+*.tmp
+.DS_Store
