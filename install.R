@@ -101,7 +101,7 @@ local({
     "crmn",   # Import de MetaboAnalystR publié sur CRAN
     "pls", "ellipse", "pheatmap", "ggrepel", "patchwork", "qs2", "memoise",
     "viridis", "gridExtra", "reshape", "stringr", "xtable", "rjson", "RJSONIO",
-    "httr", "progress", "vegan", "scatterplot3d"
+    "httr", "progress", "vegan", "scatterplot3d", "factoextra"
   )
 
   install_missing(paste0("bioc::", bioc), "Bioconductor")

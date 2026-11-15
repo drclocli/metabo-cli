@@ -7,5 +7,6 @@
 stats_defaults()
 }
 \description{
-Valeurs identiques à celles proposées par défaut sur metaboanalyst.ca.
+Valeurs identiques à celles proposées par défaut sur metaboanalyst.ca
+(voir README pour les points non vérifiables).
 }

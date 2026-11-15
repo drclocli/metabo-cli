@@ -7,17 +7,25 @@
 run_stats(input, out_dir, params = list())
 }
 \arguments{
-\item{input}{Chemin du fichier CSV (concentrations ou intensités, avec une
-colonne d'échantillons et une colonne de groupes).}
+\item{input}{Chemin du fichier CSV (une colonne d'échantillons, une colonne
+de groupes, puis une colonne par variable ; transposé pour \code{colu}/\code{colp}).}
 
 \item{out_dir}{Dossier parent ; un sous-dossier \verb{stats_<horodatage>} y est créé.}
 
 \item{params}{Liste de paramètres (voir \code{stats_defaults()}) ; les valeurs
-absentes prennent la valeur par défaut.}
+absentes prennent la valeur par défaut. \code{verbose = TRUE} affiche la
+sortie de MetaboAnalystR.}
 }
 \value{
-Liste invisible : \code{run_dir} et le contenu de \code{summary.json}.
+Liste invisible : \code{run_dir} et \code{summary} (contenu de summary.json).
 }
 \description{
-Lancer l'analyse statistique à un facteur
+Reproduit le pipeline de la vignette « Statistical Analysis » de
+MetaboAnalystR : lecture, contrôle, valeurs manquantes, filtrage,
+normalisation, puis t-test, fold change et volcano (2 groupes) ou ANOVA
+(plus de 2 groupes), PCA, PLS-DA et heatmap.
+}
+\details{
+Utilisable directement depuis R :
+\code{run_stats("examples/human_cachexia.csv", "out", list(trans = "LogNorm"))}.
 }

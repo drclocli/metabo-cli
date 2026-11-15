@@ -72,7 +72,14 @@ stats_parser <- function() {
     opt("--nonpar", action = "store_true", default = d$nonpar,
         help = "Tests non paramétriques (Wilcoxon / Kruskal-Wallis)."),
     opt("--unequal-var", action = "store_false", default = d$equal_var, dest = "equal_var",
-        help = "t-test de Welch (variances inégales).")
+        help = "t-test de Welch (variances inégales)."),
+    opt("--missing-max", type = "double", default = d$missing_max, metavar = "F", dest = "missing_max",
+        help = "Retirer les variables dont la fraction de valeurs manquantes dépasse F [défaut : %default]."),
+    opt("--volcano-pval", type = "double", default = d$volcano_pval, metavar = "P", dest = "volcano_pval",
+        help = "Seuil de p-value brute du volcano plot [défaut : %default]."),
+    opt("--keep-intermediate", action = "store_true", default = d$keep_intermediate,
+        dest = "keep_intermediate",
+        help = "Conserver les fichiers intermédiaires de MetaboAnalystR (.qs).")
   ))
   optparse::OptionParser(
     usage = "metabo stats --input data.csv [--out DOSSIER] [options]",
@@ -141,12 +148,15 @@ stats_params_from_opts <- function(o) {
   validate_number(o$fc, "--fc", 1)
   validate_number(o$dpi, "--dpi", 36, 1200)
   if (!is.na(o$filter_cutoff)) validate_number(o$filter_cutoff, "--filter-cutoff", 0, 100)
+  validate_number(o$missing_max, "--missing-max", 0, 1)
+  validate_number(o$volcano_pval, "--volcano-pval", 0, 1)
   list(
-    format = o$format, missing = o$missing, filter = o$filter,
+    format = o$format, missing_max = o$missing_max, missing = o$missing, filter = o$filter,
     filter_cutoff = o$filter_cutoff,
     norm = as_mar_value(o$norm), trans = as_mar_value(o$trans), scale = as_mar_value(o$scale),
-    pval = o$pval, pval_type = o$pval_type, fc = o$fc,
-    nonpar = o$nonpar, equal_var = o$equal_var, dpi = o$dpi
+    pval = o$pval, pval_type = o$pval_type, fc = o$fc, volcano_pval = o$volcano_pval,
+    nonpar = o$nonpar, equal_var = o$equal_var, dpi = o$dpi,
+    keep_intermediate = o$keep_intermediate
   )
 }
 
@@ -234,7 +244,8 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
     error = function(e) {
       kind <- if (inherits(e, "metabo_input_error")) "Erreur d'entrée" else "Erreur d'analyse"
       err(kind, " : ", conditionMessage(e))
-      if (!is.null(e$parent)) err("  Cause : ", conditionMessage(e$parent))
+      if (!is.null(e$parent) && !grepl(conditionMessage(e$parent), conditionMessage(e), fixed = TRUE))
+        err("  Cause : ", conditionMessage(e$parent))
       if (verbose && !is.null(trace)) {
         err("\nTrace R :")
         calls <- vapply(trace, function(cl) paste(deparse(cl, nlines = 1L), collapse = ""), "")

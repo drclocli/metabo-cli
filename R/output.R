@@ -48,15 +48,52 @@ write_summary <- function(run_dir, summary) {
   invisible(path)
 }
 
-#' Exécuter du code avec `out_dir` comme répertoire courant
-#'
-#' MetaboAnalystR écrit ses fichiers (PNG, CSV, .qs) dans le répertoire courant :
-#' on s'y place le temps de l'analyse et on restaure le répertoire d'origine
-#' en sortie, même en cas d'erreur (`on.exit()` est l'équivalent d'un `finally`).
-#'
+#' Horodatage ISO 8601 avec fuseau
 #' @keywords internal
-with_dir <- function(dir, code) {
-  owd <- setwd(dir)
-  on.exit(setwd(owd), add = TRUE)
-  force(code)
+timestamp_iso <- function(time = Sys.time()) format(time, "%Y-%m-%dT%H:%M:%S%z")
+
+#' Versions des composants (pour la traçabilité dans summary.json)
+#' @keywords internal
+versions_info <- function() {
+  v <- function(pkg) tryCatch(as.character(utils::packageVersion(pkg)), error = function(e) NA_character_)
+  list(metabocli = v("metabocli"), MetaboAnalystR = v("MetaboAnalystR"),
+       R = paste(R.version$major, R.version$minor, sep = "."))
 }
+
+#' Finaliser une exécution : nettoyage, liste des fichiers, summary.json
+#'
+#' En cas d'erreur, summary.json est tout de même écrit (status = "error")
+#' puis l'erreur est relancée pour que le CLI choisisse le code de sortie.
+#'
+#' @param run_dir Dossier d'exécution.
+#' @param summary Résumé partiel (module, paramètres, entrée...).
+#' @param outcome Résultat du pipeline (`list(results, warnings)`) ou condition d'erreur.
+#' @param keep_intermediate Garder les fichiers intermédiaires de MetaboAnalystR.
+#' @keywords internal
+finish_run <- function(run_dir, summary, outcome, keep_intermediate = FALSE) {
+  if (!isTRUE(keep_intermediate)) remove_intermediate_files(run_dir)
+  summary$finished_at <- timestamp_iso()
+  summary$files <- as.list(list_outputs(run_dir))
+
+  if (inherits(outcome, "error")) {
+    if (!inherits(outcome, "metabo_error"))
+      outcome <- metabo_condition(paste0("Erreur inattendue : ", conditionMessage(outcome)),
+                                  "metabo_analysis_error", parent = outcome)
+    summary$status <- "error"
+    summary$error <- list(
+      type = if (inherits(outcome, "metabo_input_error")) "input"
+             else if (inherits(outcome, "metabo_network_error")) "network" else "analysis",
+      message = conditionMessage(outcome)
+    )
+    write_summary(run_dir, summary)
+    stop(outcome)
+  }
+
+  summary$status <- "success"
+  summary$results <- outcome$results
+  summary$warnings <- c(summary$warnings, as.list(outcome$warnings))
+  write_summary(run_dir, summary)
+  invisible(list(run_dir = run_dir, summary = summary))
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
