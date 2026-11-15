@@ -24,6 +24,7 @@ test_that("run_stats() produit les fichiers et le résumé attendus", {
   # paramètres par défaut du site
   expect_equal(s$parameters$norm, "NULL")
   expect_equal(s$parameters$pval, 0.05)
+  expect_null(s$parameters$missing_max)   # pas de suppression par défaut, comme le site
 
   # résultats clés : t-test sur 2 groupes, top 10 trié par p-value
   r <- s$results

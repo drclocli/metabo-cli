@@ -6,7 +6,7 @@
 stats_defaults <- function() {
   list(
     format        = "rowu",     # échantillons en lignes, non appariés
-    missing_max   = 0.5,        # retirer les variables avec > 50 % de valeurs manquantes
+    missing_max   = NA_real_,   # pas de suppression (case décochée sur le site ; 0.5 si cochée)
     missing       = "lod",      # puis remplacer par 1/5 du minimum positif de la variable
     filter        = "iqr",      # filtre de variance : intervalle interquartile
     filter_cutoff = NA_real_,   # NA = % automatique (5 % si < 250 variables, 10 %, 25 %, 40 %)
@@ -103,23 +103,29 @@ stats_pipeline <- function(path, p) {
   step("Contrôle des données", M$SanityCheckData(mset))
   step("Contrôle des données", M$PerformSanityClosure(mset))
 
-  # Valeurs manquantes : suppression des variables trop incomplètes, puis imputation
-  step("Valeurs manquantes", M$RemoveMissingByPercent(mset, p$missing_max))
-  step("Imputation", M$ImputeMissingVar(mset, p$missing))
+  # Même ordre que le site (Data filter, puis Missing value) :
+  # 1. suppression optionnelle des variables trop incomplètes (désactivée par
+  #    défaut sur le site ; seuil proposé 50 % quand on l'active) ;
+  # 2. filtre de variance ;
+  # 3. imputation des valeurs manquantes restantes.
+  if (!is.na(p$missing_max))
+    step("Valeurs manquantes", M$RemoveMissingByPercent(mset, p$missing_max, FALSE))
 
-  # Filtrage. "none" = aucun pourcentage retiré (le plafond de variables
-  # de MetaboAnalystR s'applique toujours).
+  # "none" = aucun pourcentage retiré (le plafond de variables de
+  # MetaboAnalystR s'applique toujours).
   var_filter <- if (p$filter == "none") "iqr" else p$filter
   var_cutoff <- if (p$filter == "none") 0 else if (is.na(p$filter_cutoff)) NULL else p$filter_cutoff
-  step("Filtrage", M$FilterVariable(mset, "F", 25, var_filter, var_cutoff, "mean", 0))
+  step("Filtrage", M$FilterVariable(mset, "F", 20, var_filter, var_cutoff, "mean", 0))
+  # FilterVariable() ne renvoie pas l'objet mis à jour : on relit la matrice
+  # filtrée pour vérifier qu'il reste des variables avant l'imputation.
+  latest <- mar_internal(".get.latest.proc.matrix")(mset)
+  check_features_left(if (is.null(latest)) 0L else ncol(latest$data))
+
+  step("Imputation", M$ImputeMissingVar(mset, p$missing))
 
   step("Normalisation", M$PreparePrenormData(mset))
   step("Normalisation", M$Normalization(mset, p$norm, p$trans, p$scale, ratio = FALSE, ratioNum = 20))
-  n_left <- NCOL(mset$dataSet$norm)
-  if (n_left < 2L)
-    analysis_error("Il reste ", n_left, " variable(s) après le contrôle (variables constantes ",
-                   "supprimées), les valeurs manquantes et le filtrage ; au moins 2 sont nécessaires. ",
-                   "Essayez --filter none ou --missing-max 1.")
+  check_features_left(NCOL(mset$dataSet$norm))
   step("Graphique de normalisation", M$PlotNormSummary(mset, "norm_0_", "png", dpi, width = NA))
   step("Graphique de normalisation", M$PlotSampleNormSummary(mset, "snorm_0_", "png", dpi, width = NA))
 
@@ -217,6 +223,14 @@ top_features <- function(sig_mat, stat_col, log2fc = NULL, n = 10L) {
       row$log2_fc <- unname(signif(log2fc[[feat]], 5))
     row
   })
+}
+
+check_features_left <- function(n_left) {
+  if (n_left < 2L)
+    analysis_error("Il reste ", n_left, " variable(s) après le contrôle (variables constantes ",
+                   "supprimées), les valeurs manquantes et le filtrage ; au moins 2 sont nécessaires. ",
+                   "Essayez --filter none, ou un --missing-max plus élevé.")
+  invisible(n_left)
 }
 
 nrow_or_0 <- function(x) if (is.null(x)) 0L else NROW(x)

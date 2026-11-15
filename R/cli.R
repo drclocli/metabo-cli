@@ -74,7 +74,8 @@ stats_parser <- function() {
     opt("--unequal-var", action = "store_false", default = d$equal_var, dest = "equal_var",
         help = "t-test de Welch (variances inégales)."),
     opt("--missing-max", type = "double", default = d$missing_max, metavar = "F", dest = "missing_max",
-        help = "Retirer les variables dont la fraction de valeurs manquantes dépasse F [défaut : %default]."),
+        help = paste0("Retirer les variables manquantes dans une fraction F des échantillons ou plus ",
+                      "(le site propose 0.5 quand on coche l'option) [défaut : aucune suppression].")),
     opt("--volcano-pval", type = "double", default = d$volcano_pval, metavar = "P", dest = "volcano_pval",
         help = "Seuil de p-value brute du volcano plot [défaut : %default]."),
     opt("--keep-intermediate", action = "store_true", default = d$keep_intermediate,
@@ -151,7 +152,7 @@ stats_params_from_opts <- function(o) {
   validate_number(o$fc, "--fc", 1)
   validate_number(o$dpi, "--dpi", 36, 1200)
   if (!is.na(o$filter_cutoff)) validate_number(o$filter_cutoff, "--filter-cutoff", 0, 100)
-  validate_number(o$missing_max, "--missing-max", 0, 1)
+  if (!is.na(o$missing_max)) validate_number(o$missing_max, "--missing-max", 0, 1)
   validate_number(o$volcano_pval, "--volcano-pval", 0, 1)
   list(
     format = o$format, missing_max = o$missing_max, missing = o$missing, filter = o$filter,

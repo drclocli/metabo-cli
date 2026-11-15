@@ -106,16 +106,17 @@ metabo stats --input examples/human_cachexia.csv --out ./resultats
 metabo stats --input examples/cow_diet.csv --out ./resultats --trans LogNorm --scale ParetoNorm
 ```
 
-Pipeline : lecture → contrôle des données → valeurs manquantes (suppression puis
-imputation) → filtrage → normalisation → **t-test, fold change et volcano** (2 groupes)
-ou **ANOVA** (plus de 2 groupes) → PCA → PLS-DA (avec validation croisée et VIP) → heatmap.
+Pipeline, dans l'ordre du site : lecture → contrôle des données → suppression optionnelle
+des variables trop incomplètes → filtre de variance → imputation des valeurs manquantes →
+normalisation → **t-test, fold change et volcano** (2 groupes) ou **ANOVA** (plus de
+2 groupes) → PCA → PLS-DA (avec validation croisée et VIP) → heatmap.
 
 | Option | Défaut | Valeurs |
 |---|---|---|
 | `--input FICHIER` | (obligatoire) | CSV, voir le format plus bas |
 | `--out DOSSIER` | `out` | dossier parent des résultats |
 | `--format` | `rowu` | `rowu` / `rowp` (échantillons en lignes, non appariés / appariés), `colu` / `colp` (en colonnes) |
-| `--missing-max` | `0.5` | retirer les variables avec plus de 50 % de valeurs manquantes |
+| `--missing-max` | aucune suppression | retirer les variables manquantes dans au moins cette fraction des échantillons (le site propose `0.5` quand on coche l'option) |
 | `--missing` | `lod` | imputation : `lod` (1/5 du minimum positif), `exclude`, `colmin`, `mean`, `median`, `knn_var`, `knn_smp`, `bpca`, `ppca`, `svdImpute` |
 | `--filter` | `iqr` | `none`, `iqr`, `sd`, `mad`, `rsd`, `nrsd`, `mean`, `median` |
 | `--filter-cutoff` | automatique | % de variables retirées (auto : 5 % sous 250 variables, 10 % sous 500, 25 % sous 1000, 40 % au-delà) |
@@ -292,7 +293,7 @@ trace R complète.
 | Fichier | Source | Description |
 |---|---|---|
 | `examples/human_cachexia.csv` | https://rest.xialab.ca/api/download/metaboanalyst/human_cachexia.csv (vignette *Statistical Analysis*) | concentrations urinaires (RMN), 77 patients, 63 métabolites, cachexie / contrôle (Eisner et al., 2010) |
-| `examples/cow_diet.csv` | https://rest.xialab.ca/api/download/metaboanalyst/cow_diet.csv (jeu d'exemple du site) | métabolites du rumen, 39 vaches, 4 régimes (0, 15, 30, 45 % de céréales) : cas multi-groupes (ANOVA) |
+| `examples/cow_diet.csv` | https://rest.xialab.ca/api/download/metaboanalyst/cow_diet.csv (jeu d'exemple du site) | métabolites du rumen, 39 vaches, 4 régimes (0, 15, 30, 45 % d'orge) : cas multi-groupes (ANOVA) |
 | `examples/pathway_compounds.txt` | liste `tmp.vec` de la vignette [*Pathway Analysis*](https://www.metaboanalyst.ca/resources/vignettes/Pathway_Analysis.html) | 18 noms de composés, dont `L-Isolucine` volontairement mal orthographié |
 
 ## Réseau et confidentialité (module `pathway`)
@@ -369,10 +370,22 @@ fichiers, puis restaure le répertoire d'origine (`on.exit()`).
   MetaboAnalystR. La vignette (2023) annonçait 53 variables. Pour la liste de la
   vignette pathway, l'API renvoie 29 voies (les tests du dépôt en attendent 28) : la
   bibliothèque KEGG est mise à jour côté serveur.
-- **Valeurs par défaut non vérifiables sans session sur le site** :
-  - le seuil de suppression des valeurs manquantes (`--missing-max 0.5`, alors que
-    `RemoveMissingByPercent()` utilise 0.2 par défaut) ;
-  - l'ordre imputation puis filtrage.
+- **Valeurs par défaut vérifiées sur le site** (module Statistical Analysis [one factor],
+  novembre 2026, d'après les formulaires et l'historique « Show R Commands ») :
+  - format `rowu` ; imputation LoD ; normalisation, transformation et mise à l'échelle
+    à « None » ;
+  - suppression des variables trop incomplètes **désactivée par défaut** (case « Enable
+    missing-value exclusion » décochée). Cochée, elle appelle
+    `RemoveMissingByPercent(mSet, percent=0.5, F)`. Le `0.2` par défaut de cette fonction
+    R n'est pas utilisé par le site ;
+  - ordre : filtrage (dont la suppression des variables incomplètes), puis imputation.
+- **Filtre de variance** : le site présélectionne l'IQR avec un pourcentage automatique,
+  mais ne l'applique que si l'on clique sur « Submit ». Un clic direct sur « Proceed »
+  exécute `FilterVariable(..., "none", -1, ...)`, c'est-à-dire sans filtre de variance.
+  `metabo stats` applique l'IQR automatique par défaut, comme après « Submit » ; utilisez
+  `--filter none` pour reproduire « Proceed ».
+- **Suppression des variables incomplètes** : le site affiche « Remove features with > 50 % »,
+  mais une variable manquante dans exactement 50 % des échantillons est aussi retirée.
 - **Analyses non incluses** :
   - test de permutation PLS-DA ;
   - sPLS-DA, oPLS-DA, SAM, EBAM, clustering, random forest et SVM ;
