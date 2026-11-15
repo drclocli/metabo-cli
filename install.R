@@ -9,7 +9,8 @@
 #      avec le support Bioconductor, ou restaure renv.lock s'il existe ;
 #   3. installe uniquement les paquets manquants (CRAN, Bioconductor, GitHub) ;
 #   4. vérifie que library(MetaboAnalystR) se charge ;
-#   5. termine par renv::snapshot() (l'équivalent d'un package-lock.json).
+#   5. termine par renv::snapshot() (l'équivalent d'un package-lock.json) ;
+#   6. crée la commande `metabo` : lien dans ~/.local/bin (ou $METABO_BIN_DIR).
 #
 # Note R : avec le R de Homebrew, CRAN et Bioconductor ne fournissent pas de
 # binaires compatibles ; tout est compilé depuis les sources (compter 30 à 60 min
@@ -149,6 +150,31 @@ local({
 
   # ------------------------------------------------------------- 6. lockfile
   renv::snapshot(prompt = FALSE, exclude = "metabocli")
-  msg("Environnement prêt. Pour utiliser la commande `metabo` partout :")
-  msg("  ln -sf \"", normalizePath("inst/bin/metabo"), "\" ~/.local/bin/metabo")
+
+  # ------------------------------------------- 7. commande `metabo` dans le PATH
+  # Lien symbolique dans un dossier utilisateur (pas de sudo) : l'exécutable
+  # retrouve le projet en suivant le lien. Dossier modifiable via METABO_BIN_DIR.
+  # Les fichiers de configuration du shell ne sont jamais modifiés.
+  bin_dir <- path.expand(Sys.getenv("METABO_BIN_DIR", "~/.local/bin"))
+  target  <- normalizePath("inst/bin/metabo")
+  link    <- file.path(bin_dir, "metabo")
+  dir.create(bin_dir, recursive = TRUE, showWarnings = FALSE)
+  current <- Sys.readlink(link)   # "" pour un fichier ordinaire, NA si absent
+  is_link <- !is.na(current) && nzchar(current)
+  if (file.exists(link) && !is_link) {
+    msg("ATTENTION : ", link, " existe et n'est pas un lien symbolique : laissé tel quel.")
+  } else {
+    if (is_link) unlink(link)   # ancien lien (autre clone, etc.)
+    if (!file.symlink(target, link)) fail("Impossible de créer le lien ", link)
+    msg("Commande installée : ", link, " -> ", target)
+  }
+  in_path <- normalizePath(bin_dir, mustWork = FALSE) %in%
+    normalizePath(strsplit(Sys.getenv("PATH"), ":", fixed = TRUE)[[1]], mustWork = FALSE)
+  if (in_path) {
+    msg("Environnement prêt. Essayez : metabo --help")
+  } else {
+    msg("Environnement prêt, mais ", bin_dir, " n'est pas dans votre PATH. Ajoutez à ~/.zprofile :")
+    msg("  export PATH=\"", bin_dir, ":$PATH\"")
+    msg("puis ouvrez un nouveau terminal (ou lancez directement ", link, ").")
+  }
 })

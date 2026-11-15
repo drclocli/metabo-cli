@@ -61,16 +61,18 @@ Rscript install.R
    GitHub, sans vignettes) ;
 4. vérifie que `library(MetaboAnalystR)` se charge ;
 5. installe `metabocli` (le code de ce repo) dans la bibliothèque du projet ;
-6. termine par `renv::snapshot()`.
+6. termine par `renv::snapshot()` ;
+7. crée la commande `metabo` : un lien symbolique `~/.local/bin/metabo` vers
+   `inst/bin/metabo` (sans `sudo`). Pour un autre dossier :
+   `METABO_BIN_DIR=~/bin Rscript install.R`.
 
-Pour disposer de la commande `metabo` partout :
-
-```bash
-ln -sf "$PWD/inst/bin/metabo" ~/.local/bin/metabo
-```
+Si ce dossier n'est pas dans votre `PATH`, le script l'indique et affiche la ligne à
+ajouter à `~/.zprofile` ; il ne modifie jamais vos fichiers de configuration du shell.
+Un fichier `metabo` qui n'est pas un lien symbolique n'est jamais écrasé.
 
 L'exécutable retrouve le projet en suivant le lien symbolique. S'il est copié ailleurs,
-définissez `METABO_HOME=<chemin du repo>`.
+définissez `METABO_HOME=<chemin du repo>`. Pour désinstaller la commande :
+`rm ~/.local/bin/metabo`.
 
 ### Choix d'installation à connaître
 
