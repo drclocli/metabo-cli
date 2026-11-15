@@ -1,0 +1,20 @@
+# Composés de la vignette « Pathway Analysis » de MetaboAnalystR
+# (L-Isolucine est volontairement mal orthographié dans la vignette)
+Acetoacetic acid
+Beta-Alanine
+Creatine
+Dimethylglycine
+Fumaric acid
+Glycine
+Homocysteine
+L-Cysteine
+L-Isolucine
+L-Phenylalanine
+L-Serine
+L-Threonine
+L-Tyrosine
+L-Valine
+Phenylpyruvic acid
+Propionic acid
+Pyruvic acid
+Sarcosine

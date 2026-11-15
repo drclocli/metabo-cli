@@ -184,3 +184,54 @@ validate_stats_input <- function(path, format = "rowu") {
     n_missing = sum(is.na(num)), notes = notes
   )
 }
+
+#' Valider la liste de composés du module pathway
+#'
+#' Un composé par ligne ; les lignes vides et celles commençant par `#` sont
+#' ignorées, les doublons retirés. Vérifie le format des identifiants HMDB
+#' (`HMDB0000060` ou `HMDB00060`) et KEGG (`C00022`).
+#'
+#' @param path Chemin du fichier texte.
+#' @param id_type `name`, `hmdb` ou `kegg`.
+#' @return Liste : `path`, `compounds` (vecteur), `n_input`, `n_duplicates`, `notes`.
+#' @keywords internal
+validate_pathway_input <- function(path, id_type = "name") {
+  path <- validate_input_file(path)
+  lines <- tryCatch(readLines(path, warn = FALSE, encoding = "UTF-8"),
+                    error = function(e) input_error("Lecture impossible de ", basename(path), " : ", conditionMessage(e)))
+  lines <- trimws(gsub("^﻿|\r", "", lines))           # BOM, fins de ligne Windows
+  lines <- gsub('^"(.*)"$', "\\1", lines)                  # guillemets éventuels
+  lines <- lines[nzchar(lines) & !startsWith(lines, "#")]
+  if (length(lines) == 0L) input_error("Aucun composé dans ", basename(path), ".")
+
+  # Fichier tabulaire au lieu d'une liste (ex. le CSV du module stats)
+  if (mean(grepl("[,;\t].*[0-9]+(\\.[0-9]+)?\\s*$", lines) & lengths(strsplit(lines, "[,;\t]")) > 3) > 0.5)
+    input_error(basename(path), " ressemble à un tableau. Le module pathway attend une liste de ",
+                "composés, un par ligne (noms, identifiants HMDB ou KEGG).")
+
+  n_input <- length(lines)
+  compounds <- lines[!duplicated(tolower(lines))]
+  notes <- character()
+  if (length(compounds) < n_input)
+    notes <- c(notes, paste(n_input - length(compounds), "doublon(s) ignoré(s)."))
+
+  pattern <- switch(id_type, hmdb = "^HMDB[0-9]{5,7}$", kegg = "^C[0-9]{5}$", NULL)
+  if (!is.null(pattern)) {
+    bad <- compounds[!grepl(pattern, compounds, ignore.case = TRUE)]
+    if (length(bad))
+      input_error(length(bad), " identifiant(s) ", toupper(id_type), " invalide(s) : ",
+                  paste0("'", utils::head(bad, 5), "'", collapse = ", "),
+                  if (id_type == "hmdb") " (attendu : HMDB0000060)" else " (attendu : C00022)", ".")
+  } else {
+    if (mean(grepl("^HMDB[0-9]{5,7}$", compounds, ignore.case = TRUE)) > 0.8)
+      input_error("La liste contient des identifiants HMDB : ajoutez --id-type hmdb.")
+    if (mean(grepl("^C[0-9]{5}$", compounds)) > 0.8)
+      input_error("La liste contient des identifiants KEGG : ajoutez --id-type kegg.")
+  }
+  if (length(compounds) < 3L)
+    input_error("Au moins 3 composés distincts sont nécessaires pour une analyse de ",
+                "sur-représentation (", length(compounds), " fourni(s)).")
+
+  list(path = path, compounds = compounds, n_input = n_input,
+       n_duplicates = n_input - length(compounds), notes = notes)
+}

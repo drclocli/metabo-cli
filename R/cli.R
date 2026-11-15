@@ -104,7 +104,10 @@ pathway_parser <- function() {
         help = "Test de sur-représentation : hyperg ou fisher [défaut : %default]."),
     opt("--topology", type = "character", default = d$topology, metavar = "MESURE",
         help = paste0("Mesure de topologie : rbc (centralité d'intermédiarité relative) ",
-                      "ou dgr (centralité de degré) [défaut : %default]."))
+                      "ou dgr (centralité de degré) [défaut : %default].")),
+    opt("--keep-intermediate", action = "store_true", default = d$keep_intermediate,
+        dest = "keep_intermediate",
+        help = "Conserver les fichiers intermédiaires de MetaboAnalystR (.qs, .rds).")
   ))
   optparse::OptionParser(
     usage = "metabo pathway --input compounds.txt [--out DOSSIER] [options]",
@@ -169,7 +172,7 @@ pathway_params_from_opts <- function(o) {
   if (!grepl("^[a-z]{2,5}$", o$organism))
     input_error("Code d'espèce KEGG invalide : '", o$organism, "' (ex. hsa, mmu, rno).")
   list(id_type = o$id_type, organism = o$organism, ora_method = o$ora_method,
-       topology = o$topology, dpi = o$dpi)
+       topology = o$topology, dpi = o$dpi, keep_intermediate = o$keep_intermediate)
 }
 
 COMMANDS <- list(
@@ -242,7 +245,9 @@ main <- function(args = commandArgs(trailingOnly = TRUE)) {
       130L
     },
     error = function(e) {
-      kind <- if (inherits(e, "metabo_input_error")) "Erreur d'entrée" else "Erreur d'analyse"
+      kind <- if (inherits(e, "metabo_input_error")) "Erreur d'entrée"
+              else if (inherits(e, "metabo_network_error")) "Erreur réseau"
+              else "Erreur d'analyse"
       err(kind, " : ", conditionMessage(e))
       if (!is.null(e$parent) && !grepl(conditionMessage(e$parent), conditionMessage(e), fixed = TRUE))
         err("  Cause : ", conditionMessage(e$parent))

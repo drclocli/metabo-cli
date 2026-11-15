@@ -14,9 +14,15 @@ run_pathway(input, out_dir, params = list())
 \item{params}{Liste de paramètres (voir \code{pathway_defaults()}).}
 }
 \value{
-Liste invisible : \code{run_dir} et le contenu de \code{summary.json}.
+Liste invisible : \code{run_dir} et \code{summary} (contenu de summary.json).
 }
 \description{
+Reproduit le pipeline de la vignette « Pathway Analysis » : correspondance
+des composés, bibliothèque KEGG de l'espèce, analyse de sur-représentation
+(ORA) et de topologie, graphique de synthèse.
+}
+\details{
 Nécessite un accès réseau : MetaboAnalystR télécharge les bibliothèques de
-composés et de voies depuis les serveurs de Xia Lab.
+composés depuis metaboanalyst.ca et délègue le calcul ORA/topologie à l'API
+de Xia Lab (xialab.ca), à qui la liste des composés est envoyée.
 }

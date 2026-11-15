@@ -61,3 +61,35 @@ test_that("le format apparié exige des étiquettes de paires valides", {
   r[[7]][2] <- "-2"
   expect_input_error(metabocli:::validate_stats_input(write_rows(r), "rowp"), "paires")
 })
+
+# Validation des listes de composés du module pathway (sans réseau).
+
+write_lines <- function(x) {
+  path <- tempfile(fileext = ".txt")
+  writeLines(x, path)
+  path
+}
+
+test_that("une liste de composés est nettoyée", {
+  info <- metabocli:::validate_pathway_input(write_lines(
+    c("# commentaire", "Glycine", "", "  L-Serine  ", "\"Pyruvic acid\"", "glycine", "Creatine")))
+  expect_equal(info$compounds, c("Glycine", "L-Serine", "Pyruvic acid", "Creatine"))
+  expect_equal(info$n_duplicates, 1L)
+})
+
+test_that("les identifiants HMDB et KEGG sont contrôlés", {
+  ids <- c("HMDB0000060", "HMDB00056", "HMDB0000064")
+  expect_length(metabocli:::validate_pathway_input(write_lines(ids), "hmdb")$compounds, 3L)
+  expect_input_error(metabocli:::validate_pathway_input(write_lines(c(ids, "HMDB60")), "hmdb"),
+                     "HMDB invalide.*'HMDB60'")
+  expect_input_error(metabocli:::validate_pathway_input(write_lines(c("C00022", "X1", "C00037")), "kegg"),
+                     "KEGG invalide.*'X1'")
+  expect_input_error(metabocli:::validate_pathway_input(write_lines(ids)), "--id-type hmdb")
+})
+
+test_that("les listes trop courtes ou tabulaires sont refusées", {
+  expect_input_error(metabocli:::validate_pathway_input(write_lines(c("Glycine", "Serine"))),
+                     "Au moins 3 composés")
+  expect_input_error(metabocli:::validate_pathway_input(write_lines(
+    c("Sample,Group,A,B", "S1,a,1,2", "S2,a,3,4", "S3,b,5,6"))), "ressemble à un tableau")
+})
