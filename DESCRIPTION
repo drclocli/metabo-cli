@@ -24,6 +24,7 @@ Imports:
     utils
 Suggests:
     testthat (>= 3.0.0),
+    withr,
     pkgload
 Remotes:
     xia-lab/MetaboAnalystR

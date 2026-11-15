@@ -1099,7 +1099,7 @@
       "RemoteHost": "api.github.com",
       "RemoteRepo": "MetaboAnalystR",
       "RemoteUsername": "xia-lab",
-      "RemoteRef": "master",
+      "RemoteRef": "cae13a9c4cf4e243ade98782623919b2252f22f7",
       "RemoteSha": "cae13a9c4cf4e243ade98782623919b2252f22f7",
       "NeedsCompilation": "yes"
     },
