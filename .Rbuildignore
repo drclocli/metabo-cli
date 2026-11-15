@@ -1,0 +1,10 @@
+^renv$
+^renv\.lock$
+^\.Rprofile$
+^install\.R$
+^LICENSE\.md$
+^README\.md$
+^out$
+^resultats$
+^results$
+^\.claude$

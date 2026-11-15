@@ -1,0 +1,28 @@
+Package: metabocli
+Title: Command-Line Interface for MetaboAnalystR Statistical and Pathway Analysis
+Version: 0.1.0
+Authors@R:
+    person("drclocli", role = c("aut", "cre"),
+           email = "torreschloe64@gmail.com")
+Description: Runs two MetaboAnalyst modules locally through the MetaboAnalystR
+    package: "Statistical Analysis [one factor]" and targeted "Pathway Analysis".
+    Each run writes its plots, result tables and a machine-readable summary.json
+    into a timestamped output directory. The run_*() functions can be called
+    directly from R; the `metabo` executable wraps them in a CLI.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends:
+    R (>= 4.0)
+Imports:
+    MetaboAnalystR,
+    optparse,
+    jsonlite,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    pkgload
+Remotes:
+    xia-lab/MetaboAnalystR
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.1.1

@@ -135,7 +135,20 @@ local({
   suppressPackageStartupMessages(library(MetaboAnalystR))
   msg("MetaboAnalystR ", as.character(packageVersion("MetaboAnalystR")), " chargé")
 
-  # ------------------------------------------------------------- 5. lockfile
-  renv::snapshot(prompt = FALSE)
-  msg("Environnement prêt.")
+  # ------------------------------------------- 5. metabocli (le code du repo)
+  # Toujours réinstallé, pour refléter le code courant. R CMD INSTALL direct :
+  # c'est le paquet du projet lui-même, il n'a pas sa place dans renv.lock.
+  if (file.exists("DESCRIPTION")) {
+    msg("Installation de metabocli")
+    status <- system2(file.path(R.home("bin"), "R"),
+                      c("CMD", "INSTALL", "--no-multiarch",
+                        paste0("--library=", shQuote(renv::paths$library())), "."),
+                      stdout = FALSE, stderr = FALSE)
+    if (status != 0L) fail("Échec de l'installation de metabocli (lancez R CMD INSTALL . pour le détail).")
+  }
+
+  # ------------------------------------------------------------- 6. lockfile
+  renv::snapshot(prompt = FALSE, exclude = "metabocli")
+  msg("Environnement prêt. Pour utiliser la commande `metabo` partout :")
+  msg("  ln -sf \"", normalizePath("inst/bin/metabo"), "\" ~/.local/bin/metabo")
 })

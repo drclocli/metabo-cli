@@ -1,0 +1,51 @@
+#!/usr/bin/env Rscript
+# metabo : exécutable du CLI metabocli.
+#
+# 1. retrouve la racine du projet (dossier contenant renv/activate.R) en partant
+#    de l'emplacement réel de ce script (liens symboliques résolus), ou via
+#    la variable METABO_HOME ;
+# 2. active le renv du projet, pour utiliser exactement les versions de renv.lock ;
+# 3. charge metabocli (installé dans le renv, ou le code source si METABO_DEV=1)
+#    et quitte avec le code de sortie renvoyé par metabocli::main().
+#
+# Variables d'environnement :
+#   METABO_HOME  racine du projet metabo-cli (si le script est copié ailleurs)
+#   METABO_DEV=1 charge le code source R/ avec pkgload (sans réinstallation)
+
+local({
+  fail <- function(...) {
+    cat("Erreur d'environnement : ", ..., "\n", sep = "", file = stderr())
+    quit(save = "no", status = 2L)
+  }
+
+  home <- Sys.getenv("METABO_HOME")
+  if (!nzchar(home)) {
+    file_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
+    self <- normalizePath(sub("^--file=", "", file_arg), mustWork = TRUE)  # résout les liens
+    dir <- dirname(self)
+    while (!file.exists(file.path(dir, "renv", "activate.R")) && dirname(dir) != dir)
+      dir <- dirname(dir)
+    home <- dir
+  }
+  if (!file.exists(file.path(home, "renv", "activate.R")))
+    fail("projet metabo-cli introuvable. Définissez METABO_HOME=<chemin du repo>.")
+
+  # Activation silencieuse du renv du projet (sans changer le répertoire courant
+  # de l'utilisateur, nécessaire pour les chemins relatifs de --input / --out).
+  # RENV_PATHS_LIBRARY : voir le commentaire de .Rprofile.
+  Sys.setenv(RENV_PROJECT = home, RENV_CONFIG_SYNCHRONIZED_CHECK = "FALSE",
+             RENV_PATHS_LIBRARY = file.path(home, "renv", "library"))
+  invisible(utils::capture.output(suppressMessages(
+    source(file.path(home, "renv", "activate.R"), local = new.env())
+  )))
+
+  if (identical(Sys.getenv("METABO_DEV"), "1")) {
+    if (!requireNamespace("pkgload", quietly = TRUE)) fail("METABO_DEV=1 nécessite pkgload.")
+    suppressMessages(pkgload::load_all(home, quiet = TRUE, export_all = FALSE, helpers = FALSE))
+  } else if (!requireNamespace("metabocli", quietly = TRUE)) {
+    fail("metabocli n'est pas installé dans le renv du projet. Lancez : Rscript install.R")
+  }
+
+  status <- metabocli::main(commandArgs(trailingOnly = TRUE))
+  quit(save = "no", status = status)
+})
